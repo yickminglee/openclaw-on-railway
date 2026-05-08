@@ -10,6 +10,7 @@ RUN apt-get update \
     python3 \
     build-essential \
     zip \
+    tini \
   && rm -rf /var/lib/apt/lists/*
 
 RUN npm install -g openclaw@latest clawhub@latest
