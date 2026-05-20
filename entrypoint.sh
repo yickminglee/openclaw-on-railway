@@ -1,32 +1,22 @@
 #!/bin/bash
 
-# Exit immediately if a command fails, if an undefined variable is used, or if any command inside a pipe fails.
+# Exit on command errors, unset variables, and failed piped commands.
 set -euo pipefail
 
-# Create the OpenClaw data/plugin directory if it does not already exist.
+# Create the persisted OpenClaw state directory if it does not exist.
 mkdir -p /data/.openclaw
 
-# Make sure /data and the OpenClaw directory are owned by the openclaw user.
-chown -R openclaw:openclaw /data /data/.openclaw
+# Restrict /data so only the app user can access it.
+chmod 700 /data || true
 
-# Restrict /data so only its owner can read, write, and enter it.
-chmod 700 /data
-
-# Check whether the persistent Homebrew directory already exists on the Railway volume.
+# Seed persistent Homebrew storage the first time the container starts.
 if [ ! -d /data/.linuxbrew ]; then
-  # Copy the baked-in Homebrew files into persistent storage the first time.
   cp -a /home/linuxbrew/.linuxbrew /data/.linuxbrew
-
-  # Ensure the copied Homebrew files are owned by the openclaw user.
-  chown -R openclaw:openclaw /data/.linuxbrew
 fi
 
-# Remove the original Homebrew directory path inside the container.
+# Replace the in-image Homebrew path with a symlink to persistent storage.
 rm -rf /home/linuxbrew/.linuxbrew
-
-# Replace it with a symlink to the persistent Railway volume.
 ln -sfn /data/.linuxbrew /home/linuxbrew/.linuxbrew
 
-# Start the app with tini, switch to the openclaw user,
-# and replace the shell with the Node process.
-exec tini -- gosu openclaw node src/server.js
+# Start the app directly because the container already runs as the app user.
+exec tini -- node src/server.js
